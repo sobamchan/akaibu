@@ -60,3 +60,12 @@ This will download 25 most recent papers from arXiv RSS feed, and filter the one
 The result would look like,
 
 ![](./assets/screenshot.png)
+
+`akaibu` saves which papers have been scanned with an LLM, so you cannot have the same papers recommended.
+
+
+## Road map
+
+### It takes time to consume many papers
+
+Currently all of the papers are checked by an LLM. If you are digesting many papers at once, this can take time. I am planning to pre-filter with a ligher model before LLM check.
