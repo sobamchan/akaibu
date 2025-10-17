@@ -64,6 +64,20 @@ The result would look like,
 `akaibu` saves which papers have been scanned with an LLM, so you cannot have the same papers recommended.
 
 
+## Read past papers
+
+All the previously found relevant papers are saved in a database (locally on your machine ofc), you can see them by running,
+
+```sh
+akaibu show-past-papers <library-name>
+```
+
+You can also print them as markdown file which makes it easier to keep in your note or share with your colleagues,
+
+```sh
+akaibu show-past-papers <library-name> --in-markdown
+```
+
 ## Road map
 
 ### It takes time to consume many papers

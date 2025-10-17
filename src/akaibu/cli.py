@@ -158,3 +158,37 @@ def show_libraries():
             table.add_row(_name, url, _requirement)
 
         console.print(table)
+
+
+@cli.command(name="show-past-papers")
+@click.argument("library_name")
+@click.option(
+    "in_markdown",
+    "--in-markdown",
+    "-m",
+    is_flag=True,
+)
+def show_past_papers(library_name: str, in_markdown: bool):
+    libraries = cast(dict[str, str], sienna.load(user_dir() / "libraries.json"))
+    if library_name not in libraries.keys():
+        click.ClickException(
+            f"{library_name} does not exist. Use `create-feed` command to make one."
+        )
+    library_path = get_library_path(library_name)
+    library = Library.load_from_path(library_path)
+
+    papers = library.get_past_relevant_papers()
+
+    if in_markdown:
+        print("\n".join([p.to_markdown() for p in papers]))
+    else:
+        console = Console()
+        table = Table(show_header=True, header_style="bold magenta", show_lines=True)
+        table.add_column("Title")
+        table.add_column("URL")
+        table.add_column("Summary")
+
+        for paper in papers:
+            table.add_row(paper.paper.title, paper.paper.link, paper.summary)
+
+        console.print(table)

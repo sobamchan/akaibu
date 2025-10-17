@@ -56,3 +56,14 @@ class Library:
             else:
                 papers.append(Paper.from_entry(entry))
         return papers
+
+    def get_past_relevant_papers(self) -> list[PaperAndSummary]:
+        entries = self.reader.get_entries(read=True, tags=["is_relevant"])
+        papers = []
+        for ent in entries:
+            generated_summary: str = dict(self.reader.get_tags(ent))[
+                "generated_summary"
+            ]
+            paper = PaperAndSummary(Paper.from_entry(ent), generated_summary)
+            papers.append(paper)
+        return papers
