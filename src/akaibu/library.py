@@ -67,3 +67,8 @@ class Library:
             paper = PaperAndSummary(Paper.from_entry(ent), generated_summary)
             papers.append(paper)
         return papers
+
+    def count_unchecked_papers(self) -> int:
+        self.reader.update_feeds()
+        entry_counts = self.reader.get_entry_counts(read=False)
+        return entry_counts.total if entry_counts.total else 0
