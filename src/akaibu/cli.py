@@ -2,6 +2,7 @@ from typing import cast
 
 import click
 import sienna
+from kensakun import Encoder, Engine
 from rich.console import Console
 from rich.table import Table
 
@@ -74,8 +75,19 @@ def create_feed(library_name: str, url: str, requirements: str):
     is_flag=True,
     help="if given, the output will be formatetd as markdown, if not, will be a table",
 )
+@click.option(
+    "no_sorting",
+    "--no-sorting",
+    "-ns",
+    is_flag=True,
+    help="If given, no semantic embeddings based sorting is applied, it just checks papers chronogically.",
+)
 def digest_n_documents(
-    n: int, model_name: str, library_name: str | None, in_markdown: bool
+    n: int,
+    model_name: str,
+    library_name: str | None,
+    in_markdown: bool,
+    no_sorting: bool,
 ):
     libraries = cast(dict[str, str], sienna.load(user_dir() / "libraries.json"))
 
@@ -87,6 +99,15 @@ def digest_n_documents(
         library_names = [library_name]
     else:
         library_names = list(libraries.keys())
+
+    # For kensakun
+    if not no_sorting:
+        encoder = Encoder.from_model_name(
+            "Snowflake/snowflake-arctic-embed-m-v1.5",
+            truncation_ratio=0.5,
+        )
+    else:
+        encoder = None
 
     console = Console()
     for library_name in library_names:
@@ -117,8 +138,17 @@ def digest_n_documents(
         # get checker
         checker = Checker(requirement, model_name, base_url, key)
 
+        # Kensakun
+        if not no_sorting:
+            kensakun_engine = Engine.init(encoder, top_n=n)
+        else:
+            kensakun_engine = None
+
         # process papers
-        papers = cast(list[PaperAndSummary], library.get_papers(n, checker, summarizer))
+        papers = cast(
+            list[PaperAndSummary],
+            library.get_papers(n, checker, summarizer, kensakun=kensakun_engine),
+        )
 
         # output
         if in_markdown:

@@ -1,11 +1,17 @@
+import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterable
 
-from reader import Reader, make_reader
+import numpy as np
+from kensakun import Engine
+from reader import Entry, Reader, make_reader
 
 from akaibu.checker import Checker
 from akaibu.paper import Paper, PaperAndSummary
 from akaibu.summarizer import PaperSummarizer
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 @dataclass(frozen=True)
@@ -31,15 +37,31 @@ class Library:
     def list_urls(self) -> list[str]:
         return [feed.link for feed in self.reader.get_feeds()]
 
+    def sort_entries(
+        self, entries: Iterable[Entry], query: str, kensakun: Engine
+    ) -> Iterable[Entry]:
+        entries = list(entries)
+        kensakun.add_documents([f"{ent.title} {ent.summary}" for ent in entries])
+        _, indexes = kensakun.search(query)
+        return [entries[idx] for idx in indexes]
+
     def get_papers(
         self,
         limit: int = 25,
         checker: Checker | None = None,
         summarizer: PaperSummarizer | None = None,
+        kensakun: Engine | None = None,
     ) -> list[Paper] | list[PaperAndSummary]:
         self.reader.update_feeds()
-        entries = self.reader.get_entries(limit=limit, read=False)
-        papers = []
+
+        if kensakun:
+            assert summarizer
+            entries = self.reader.get_entries(limit=limit * 2, read=False)
+            entries = self.sort_entries(entries, summarizer.requirement, kensakun)
+        else:
+            entries = self.reader.get_entries(limit=limit, read=False)
+
+        relevant_papers = []
         for entry in entries:
             self.reader.mark_entry_as_read(entry)
             paper = Paper.from_entry(entry)
@@ -52,10 +74,10 @@ class Library:
                     self.reader.set_tag(
                         entry, "generated_summary", paper_and_summary.summary
                     )
-                    papers.append(paper_and_summary)
+                    relevant_papers.append(paper_and_summary)
             else:
-                papers.append(Paper.from_entry(entry))
-        return papers
+                relevant_papers.append(Paper.from_entry(entry))
+        return relevant_papers
 
     def get_past_relevant_papers(self) -> list[PaperAndSummary]:
         entries = self.reader.get_entries(read=True, tags=["is_relevant"])
